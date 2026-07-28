@@ -8,10 +8,14 @@
 
 namespace py = pybind11;
 
-std::string get_nccl_unique_id() {
+py::bytes get_nccl_unique_id() {
+    ncclUniqueId unique_id; 
+    ncclGetUniqueId(&unique_id); 
+
+    return py::bytes(reinterpret_cast<char*>(unique_id.internal), sizeof(unique_id));
 }
 
-PYBIND11_MODULE(_C, m) {
+PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     py::enum_<ReduceOp>(m, "ReduceOp")
         .value("SUM", ReduceOp::SUM)
         .value("PRODUCT", ReduceOp::PRODUCT)

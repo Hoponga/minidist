@@ -1,7 +1,7 @@
 from .enums import ReduceOp
 import os
 from .store import * 
-from minidist import _C # pybinds 
+
 
 _default_group = None
 _store = None
@@ -25,8 +25,9 @@ def init_process_group(
     local_rank: int | None = None,
     master_addr: str | None = None,
     master_port: int | None = None,
-    timeout_s: float = 300.0,
+    timeout_s: float = DEFAULT_TIMEOUT_S,
 ) -> None:
+    import minidist._C as _C # pybinds
     global _default_group, _store, _store_server 
     rank = rank if rank is not None else int(os.environ["RANK"])
     world_size = (world_size if world_size is not None else int(os.environ["WORLD_SIZE"]))
@@ -39,10 +40,13 @@ def init_process_group(
 
     if rank == 0: 
         # store server runs on rank 0 
-        _store_server = TCPStoreServer("0.0.0.0", master_port)
+        _store_server = TCPStoreServer("0.0.0.0", master_port, timeout_s=timeout_s)
+        print(f"rank {rank} starting store server on port {master_port}")
         _store_server.start() 
 
+    print(f"rank {rank} starting store client on port {master_port}")
     _store = TCPStoreClient(master_addr, master_port, timeout_s)
+    print(f"rank {rank} connected to store server on {master_addr}:{master_port}")
     prefix = f"/{run_id}"
 
     _store.set(f"{prefix}/members/{rank}", b"ready")
@@ -52,12 +56,16 @@ def init_process_group(
     ])
 
     uid_key = f"{prefix}/groups/world/nccl_id"
+
     if rank == 0:
-        _store.set(uid_key, _C.get_nccl_unique_id())
+        unique_id = _C.get_nccl_unique_id()
+        _store.set(uid_key, unique_id)
 
 
     unique_id = _store.get(uid_key)
-    _default_group = _C.ProcessGroupNCCL(unique_id = unique_id, global_rank = rank, group_rank = rank, global_ranks = list(range(world_size)), device = local_rank)
+
+    print(f"rank {rank} has received unique_id: {unique_id}")
+    #_default_group = _C.ProcessGroupNCCL(unique_id = unique_id, global_rank = rank, group_rank = rank, global_ranks = list(range(world_size)), device = local_rank)
 
 
 
