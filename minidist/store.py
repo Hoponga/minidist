@@ -54,7 +54,8 @@ class TCPStoreServer:
         self.handler = StoreRequestHandler 
 
     def start(self): 
-        self.server = socketserver.ThreadingTCPServer((self.host, self.port), StoreRequestHandler) 
+        self.server = socketserver.ThreadingTCPServer((self.host, self.port), self.handler) 
+        self.server.store = self.store 
         self._server_thread = threading.Thread(target=self.server.serve_forever)
         
         
