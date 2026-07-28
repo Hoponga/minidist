@@ -31,12 +31,14 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
 
     py::class_<ProcessGroupNCCL, std::shared_ptr<ProcessGroupNCCL>>(
         m, "ProcessGroupNCCL")
-        .def(py::init<
-             const std::string&,
-             int,
-             int,
-             std::vector<int>,
-             int>())
+        .def(
+            py::init<
+                const std::string&,
+                int,
+                int,
+                std::vector<int>,
+                int>(),
+            py::call_guard<py::gil_scoped_release>())
         .def("rank", &ProcessGroupNCCL::rank)
         .def("size", &ProcessGroupNCCL::size)
         .def("all_reduce", &ProcessGroupNCCL::all_reduce)
