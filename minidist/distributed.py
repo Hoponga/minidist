@@ -1,4 +1,7 @@
 from .enums import ReduceOp
+import os
+from .store import * 
+from minidist import _C # pybinds 
 
 _default_group = None
 _store = None
@@ -24,7 +27,41 @@ def init_process_group(
     master_port: int | None = None,
     timeout_s: float = 300.0,
 ) -> None:
-    pass
+    global _default_group, _store, _store_server 
+    rank = rank if rank is not None else int(os.environ["RANK"])
+    world_size = (world_size if world_size is not None else int(os.environ["WORLD_SIZE"]))
+
+    local_rank = (local_rank if local_rank is not None else int(os.environ["LOCAL_RANK"]))
+
+    master_addr = master_addr or os.environ["MASTER_ADDR"]
+    master_port = master_port or int(os.environ["MASTER_PORT"])
+    run_id = os.environ.get("RUN_ID", "default")
+
+    if rank == 0: 
+        # store server runs on rank 0 
+        _store_server = TCPStoreServer("0.0.0.0", master_port)
+        _store_server.start() 
+
+    _store = TCPStoreClient(master_addr, master_port, timeout_s)
+    prefix = f"/{run_id}"
+
+    _store.set(f"{prefix}/members/{rank}", b"ready")
+    _store.wait([
+        f"{prefix}/members/{r}"
+        for r in range(world_size)
+    ])
+
+    uid_key = f"{prefix}/groups/world/nccl_id"
+    if rank == 0:
+        _store.set(uid_key, _C.get_nccl_unique_id())
+
+
+    unique_id = _store.get(uid_key)
+    _default_group = _C.ProcessGroupNCCL(unique_id = unique_id, global_rank = rank, group_rank = rank, global_ranks = list(range(world_size)), device = local_rank)
+
+
+
+
 
 
 def destroy_process_group(group=None) -> None:
