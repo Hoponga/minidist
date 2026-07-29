@@ -12,9 +12,24 @@ ProcessGroupNCCL::ProcessGroupNCCL(
       group_rank_(group_rank),
       device_(device),
       global_ranks_(std::move(global_ranks)) {
+        if (unique_id_bytes.size() != sizeof(ncclUniqueId)) {
+            throw std::invalid_argument("unique_id_bytes must be of size " + std::to_string(sizeof(ncclUniqueId)) + " but instead is " + std::to_string(unique_id_bytes.size()));
+
+        }
+
+        ncclUniqueId unique_id; 
+        std::memcpy(&unique_id, unique_id_bytes.data(), sizeof(unique_id)); 
+
+        CUDACHECK(cudaSetDevice(device)); 
+        NCCLCHECK(ncclCommInitRank(&comm_, global_ranks_.size(), unique_id, group_rank_)); 
+
 }
 
 ProcessGroupNCCL::~ProcessGroupNCCL() {
+    NCCLCHECK(ncclCommDestroy(comm_)); 
+    comm_ = nullptr; 
+    CUDACHECK(cudaSetDevice(0)); 
+    std::cout << "ProcessGroupNCCL destroyed" << std::endl;
 }
 
 int ProcessGroupNCCL::rank() const {

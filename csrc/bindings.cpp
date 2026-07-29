@@ -8,10 +8,14 @@
 
 namespace py = pybind11;
 
-std::string get_nccl_unique_id() {
+py::bytes get_nccl_unique_id() {
+    ncclUniqueId unique_id; 
+    ncclGetUniqueId(&unique_id); 
+
+    return py::bytes(reinterpret_cast<char*>(unique_id.internal), sizeof(unique_id));
 }
 
-PYBIND11_MODULE(_C, m) {
+PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     py::enum_<ReduceOp>(m, "ReduceOp")
         .value("SUM", ReduceOp::SUM)
         .value("PRODUCT", ReduceOp::PRODUCT)
@@ -27,12 +31,14 @@ PYBIND11_MODULE(_C, m) {
 
     py::class_<ProcessGroupNCCL, std::shared_ptr<ProcessGroupNCCL>>(
         m, "ProcessGroupNCCL")
-        .def(py::init<
-             const std::string&,
-             int,
-             int,
-             std::vector<int>,
-             int>())
+        .def(
+            py::init<
+                const std::string&,
+                int,
+                int,
+                std::vector<int>,
+                int>(),
+            py::call_guard<py::gil_scoped_release>())
         .def("rank", &ProcessGroupNCCL::rank)
         .def("size", &ProcessGroupNCCL::size)
         .def("all_reduce", &ProcessGroupNCCL::all_reduce)
