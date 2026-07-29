@@ -103,7 +103,11 @@ def all_reduce(
     group=None,
     async_op: bool = False,
 ):
-    pass
+    if group: 
+        group.all_reduce(tensor, op, async_op) 
+    else: 
+
+        _default_group.all_reduce(tensor, op, async_op)
 
 
 def broadcast(
