@@ -1,5 +1,7 @@
 #include "process_group_nccl.h"
 
+#include <ATen/cuda/CUDAContext.h>
+
 #include "error.h"
 
 ProcessGroupNCCL::ProcessGroupNCCL(
@@ -45,6 +47,27 @@ std::shared_ptr<WorkNCCL> ProcessGroupNCCL::all_reduce(
     torch::Tensor tensor,
     ReduceOp op,
     bool async_op) {
+    validate_tensor(tensor, device_);
+
+    cudaStream_t stream = at::cuda::getCurrentCUDAStream(device_).stream();
+
+    std::lock_guard<std::mutex> lock(launch_mutex_);
+
+    NCCLCHECK(ncclAllReduce(
+        tensor.data_ptr(),
+        tensor.data_ptr(),
+        static_cast<size_t>(tensor.numel()),
+        to_nccl_dtype(tensor.scalar_type()),
+        to_nccl_op(op),
+        comm_,
+        stream));
+
+    if (!async_op) {
+        CUDACHECK(cudaStreamSynchronize(stream));
+        return nullptr;
+    }
+
+    return WorkNCCL::record(stream, {tensor});
 }
 
 std::shared_ptr<WorkNCCL> ProcessGroupNCCL::broadcast(

@@ -8,6 +8,8 @@ _store = None
 _store_server = None       # non-None only on rank 0
 _run_id = None
 _local_rank = None
+_rank = None
+_world_size = None
 _next_group_sequence = 0
 
 
@@ -28,11 +30,14 @@ def init_process_group(
     timeout_s: float = DEFAULT_TIMEOUT_S,
 ) -> None:
     import minidist._C as _C # pybinds
-    global _default_group, _store, _store_server 
+    global _default_group, _store, _store_server, _rank, _world_size
     rank = rank if rank is not None else int(os.environ["RANK"])
     world_size = (world_size if world_size is not None else int(os.environ["WORLD_SIZE"]))
 
     local_rank = (local_rank if local_rank is not None else int(os.environ["LOCAL_RANK"]))
+
+    _rank = rank
+    _world_size = world_size
 
     master_addr = master_addr or os.environ["MASTER_ADDR"]
     master_port = master_port or int(os.environ["MASTER_PORT"])
@@ -65,7 +70,7 @@ def init_process_group(
     unique_id = _store.get(uid_key)
 
     print(f"rank {rank} has received unique_id: {unique_id}")
-    #_default_group = _C.ProcessGroupNCCL(unique_id = unique_id, global_rank = rank, group_rank = rank, global_ranks = list(range(world_size)), device = local_rank)
+    _default_group = _C.ProcessGroupNCCL(unique_id = unique_id, global_rank = rank, group_rank = rank, global_ranks = list(range(world_size)), device = local_rank)
 
 
 
@@ -81,11 +86,11 @@ def is_initialized() -> bool:
 
 
 def get_rank(group=None) -> int:
-    pass
+    return _rank
 
 
 def get_world_size(group=None) -> int:
-    pass
+    return _world_size
 
 
 def new_group(ranks: list[int]):

@@ -38,6 +38,11 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
                 int,
                 std::vector<int>,
                 int>(),
+            py::arg("unique_id"),
+            py::arg("global_rank"),
+            py::arg("group_rank"),
+            py::arg("global_ranks"),
+            py::arg("device"),
             py::call_guard<py::gil_scoped_release>())
         .def("rank", &ProcessGroupNCCL::rank)
         .def("size", &ProcessGroupNCCL::size)

@@ -44,7 +44,7 @@ image = (
     )
     .run_commands(
         "cd /root/minidist && uv sync --frozen --no-install-project",
-        "cd /root/minidist && uv run python setup.py build_ext --inplace",
+        "cd /root/minidist && CXX=g++ CC=gcc uv run python setup.py build_ext --inplace",
     )
 )
 
