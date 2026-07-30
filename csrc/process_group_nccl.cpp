@@ -35,12 +35,15 @@ ProcessGroupNCCL::~ProcessGroupNCCL() {
 }
 
 int ProcessGroupNCCL::rank() const {
+    return group_rank_; 
 }
 
 int ProcessGroupNCCL::size() const {
+    return global_ranks_.size(); 
 }
 
 int ProcessGroupNCCL::to_group_rank(int global_rank) const {
+    return global_ranks_.at(global_rank); 
 }
 
 std::shared_ptr<WorkNCCL> ProcessGroupNCCL::all_reduce(
@@ -67,13 +70,17 @@ std::shared_ptr<WorkNCCL> ProcessGroupNCCL::all_reduce(
         return nullptr;
     }
 
+    
+
     return WorkNCCL::record(stream, {tensor});
+
 }
 
 std::shared_ptr<WorkNCCL> ProcessGroupNCCL::broadcast(
     torch::Tensor tensor,
     int global_src,
     bool async_op) {
+        return nullptr; 
 }
 
 std::shared_ptr<WorkNCCL> ProcessGroupNCCL::reduce(
@@ -81,12 +88,14 @@ std::shared_ptr<WorkNCCL> ProcessGroupNCCL::reduce(
     int global_dst,
     ReduceOp op,
     bool async_op) {
+        return nullptr; 
 }
 
 std::shared_ptr<WorkNCCL> ProcessGroupNCCL::all_gather_into_tensor(
     torch::Tensor output,
     torch::Tensor input,
     bool async_op) {
+        return nullptr; 
 }
 
 std::shared_ptr<WorkNCCL> ProcessGroupNCCL::reduce_scatter_tensor(
@@ -94,9 +103,11 @@ std::shared_ptr<WorkNCCL> ProcessGroupNCCL::reduce_scatter_tensor(
     torch::Tensor input,
     ReduceOp op,
     bool async_op) {
+        return nullptr; 
 }
 
 void ProcessGroupNCCL::barrier() {
+
 }
 
 void ProcessGroupNCCL::destroy() {
