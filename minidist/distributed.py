@@ -30,7 +30,7 @@ def init_process_group(
     timeout_s: float = DEFAULT_TIMEOUT_S,
 ) -> None:
     import minidist._C as _C # pybinds
-    global _default_group, _store, _store_server, _rank, _world_size
+    global _default_group, _store, _store_server, _rank, _world_size, _local_rank
     rank = rank if rank is not None else int(os.environ["RANK"])
     world_size = (world_size if world_size is not None else int(os.environ["WORLD_SIZE"]))
 
@@ -38,7 +38,7 @@ def init_process_group(
 
     _rank = rank
     _world_size = world_size
-
+    _local_rank = local_rank
     master_addr = master_addr or os.environ["MASTER_ADDR"]
     master_port = master_port or int(os.environ["MASTER_PORT"])
     run_id = os.environ.get("RUN_ID", "default")
@@ -76,6 +76,10 @@ def init_process_group(
 
 
 
+def get_device(group=None) -> str: 
+    if _local_rank is None:
+        raise ValueError("local_rank is not set")
+    return f"cuda:{_local_rank}"
 
 def destroy_process_group(group=None) -> None:
     pass
@@ -97,12 +101,33 @@ def new_group(ranks: list[int]):
     pass
 
 
+def convert_cpp_op(op: ReduceOp | str): 
+    import minidist._C as _C 
+
+    if isinstance(op, _C.ReduceOp):
+        return op
+
+    op_name = op.value if isinstance(op, ReduceOp) else op
+    op_map = {
+        "sum": _C.ReduceOp.SUM,
+        "product": _C.ReduceOp.PRODUCT,
+        "min": _C.ReduceOp.MIN,
+        "max": _C.ReduceOp.MAX,
+        "avg": _C.ReduceOp.AVG,
+    }
+
+    try:
+        return op_map[op_name.lower()]
+    except (AttributeError, KeyError):
+        raise ValueError(f"unsupported reduction op: {op}") from None
+
 def all_reduce(
     tensor,
-    op: ReduceOp = ReduceOp.SUM,
+    op: ReduceOp | str = ReduceOp.SUM,
     group=None,
     async_op: bool = False,
 ):
+    op = convert_cpp_op(op)
     if group: 
         group.all_reduce(tensor, op, async_op) 
     else: 

@@ -1,3 +1,6 @@
+import torch as _torch
+from . import _C 
+
 from .distributed import (
     NON_GROUP_MEMBER,
     all_reduce,
@@ -12,6 +15,7 @@ from .distributed import (
     new_group,
     reduce,
     reduce_scatter_tensor,
+    get_device,
 )
 from .enums import ReduceOp
 from .store import Store, TCPStoreClient, TCPStoreServer
